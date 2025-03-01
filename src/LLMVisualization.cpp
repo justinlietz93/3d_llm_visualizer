@@ -251,46 +251,46 @@ void LLMVisualization::runExperiment(const std::string& experimentType) {
 void LLMVisualization::renderPauseMenu() {
     if (!m_showPauseMenu) return;
     
-    // Create a semi-transparent overlay
+    // Enable blending for transparent UI
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
-    // Draw a dark overlay rectangle
-    float width = m_width * 0.5f;
-    float height = m_height * 0.7f;
-    float x = (m_width - width) * 0.5f;
-    float y = (m_height - height) * 0.5f;
+    // Disable depth test for UI elements
+    glDisable(GL_DEPTH_TEST);
     
-    // Draw menu background
-    m_renderer->renderRect(x, y, width, height, glm::vec4(0.1f, 0.1f, 0.2f, 0.9f));
+    // Draw dark semi-transparent background
+    m_renderer->renderRect(m_width/2 - 200, m_height/2 - 200, 400, 400, 
+                          glm::vec4(0.1f, 0.1f, 0.2f, 0.9f));
     
     // Draw title
     m_renderer->renderText("PAUSE MENU", 
-                          glm::vec2(m_width/2 - 80, y + 50), 
-                          1.5f, 
-                          glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                          glm::vec2(m_width/2 - 80, m_height/2 - 150), 
+                          2.0f, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
     
-    // Draw menu options
-    const char* options[] = {
-        "Resume",
-        "Settings",
-        "About",
-        "Quit"
+    // Menu options
+    const std::vector<std::string> options = {
+        "Resume", "Settings", "About", "Quit"
     };
     
-    float startY = y + 120;
-    float spacing = 60;
+    // Render each option
+    float yStart = m_height/2 - 80;
+    float ySpacing = 40;
     
-    for (int i = 0; i < 4; i++) {
-        glm::vec4 color = (i == m_selectedMenuOption) 
-            ? glm::vec4(1.0f, 0.8f, 0.2f, 1.0f)  // Selected item color
-            : glm::vec4(0.8f, 0.8f, 0.8f, 1.0f); // Normal item color
+    for (size_t i = 0; i < options.size(); ++i) {
+        float y = yStart + i * ySpacing;
         
+        // Highlight selected option
+        glm::vec4 color = (i == m_selectedMenuOption) ? 
+            glm::vec4(1.0f, 0.8f, 0.2f, 1.0f) : // Yellow for selected
+            glm::vec4(0.8f, 0.8f, 0.8f, 1.0f);  // White for others
+            
         m_renderer->renderText(options[i], 
-                              glm::vec2(m_width/2 - 50, startY + i * spacing), 
-                              1.2f, 
-                              color);
+                              glm::vec2(m_width/2 - 50, y), 
+                              1.5f, color);
     }
+    
+    // Restore OpenGL state
+    glEnable(GL_DEPTH_TEST);
 }
 
 void LLMVisualization::handleMenuInput() {

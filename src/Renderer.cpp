@@ -319,47 +319,60 @@ void Renderer::renderDataFlow(const glm::vec3& start, const glm::vec3& end, floa
 }
 
 void Renderer::renderText(const std::string& text, const glm::vec2& position, float scale, const glm::vec4& color) {
+    // Enable blending for text
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
     m_textShader->use();
     
-    // Set ortho projection for 2D text
-    glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(m_width), 0.0f, static_cast<float>(m_height));
+    // Set orthographic projection with inverted Y axis to match screen coordinates
+    glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(m_width), 
+                                    static_cast<float>(m_height), 0.0f); // Note inverted Y
     m_textShader->setUniform("projection", projection);
     m_textShader->setUniform("textColor", color);
     
-    // Activate texture unit
+    // Bind VAO and texture
+    glBindVertexArray(m_textVAO);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_fontTexture);
     
-    // Render each character (basic implementation)
+    // Since we don't have a real font, just render each character as a solid rectangle
     float x = position.x;
     for (char c : text) {
-        // Simple fixed-width character rendering
-        float charWidth = 16.0f * scale;
+        if (c == ' ') {
+            // Handle spaces specially
+            x += 8.0f * scale;
+            continue;
+        }
         
-        // Update quad vertices
+        // Simple character size
+        float charWidth = 10.0f * scale;
+        float charHeight = 16.0f * scale;
+        
+        // Create a simple quad for each character
         float vertices[6][4] = {
-            { x,               position.y + charWidth, 0.0f, 0.0f },            
-            { x,               position.y,             0.0f, 1.0f },
-            { x + charWidth,   position.y,             1.0f, 1.0f },
+            { x,          position.y,                0.0f, 0.0f },
+            { x,          position.y + charHeight,   0.0f, 1.0f },
+            { x + charWidth, position.y + charHeight,   1.0f, 1.0f },
             
-            { x,               position.y + charWidth, 0.0f, 0.0f },
-            { x + charWidth,   position.y,             1.0f, 1.0f },
-            { x + charWidth,   position.y + charWidth, 1.0f, 0.0f }           
+            { x,          position.y,                0.0f, 0.0f },
+            { x + charWidth, position.y + charHeight,   1.0f, 1.0f },
+            { x + charWidth, position.y,                1.0f, 0.0f }
         };
         
-        // Update buffer and render
+        // Update buffer
         glBindBuffer(GL_ARRAY_BUFFER, m_textVBO);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
         
         // Render quad
         glDrawArrays(GL_TRIANGLES, 0, 6);
         
-        // Advance cursor
-        x += charWidth;
+        // Move to next character position
+        x += charWidth + 2.0f * scale; // Add some spacing between characters
     }
     
-    // Unbind texture
+    // Clean up
+    glBindVertexArray(0);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -616,19 +629,18 @@ void Renderer::createMeshes() {
 
 void Renderer::loadFonts() {
     // In a real implementation, this would load a font texture
-    // For simplicity, we'll create a basic white texture
+    // For simplicity, create a basic font texture with a single color
     glGenTextures(1, &m_fontTexture);
     glBindTexture(GL_TEXTURE_2D, m_fontTexture);
     
-    unsigned char data[16 * 16 * 4];
-    for (int i = 0; i < 16 * 16; i++) {
-        data[i * 4 + 0] = 255; // R
-        data[i * 4 + 1] = 255; // G
-        data[i * 4 + 2] = 255; // B
-        data[i * 4 + 3] = 255; // A
+    // Create a simple white texture (single color)
+    const int texSize = 64;
+    unsigned char data[texSize * texSize];
+    for (int i = 0; i < texSize * texSize; i++) {
+        data[i] = 255; // White
     }
     
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 16, 16, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, texSize, texSize, 0, GL_RED, GL_UNSIGNED_BYTE, data);
     
     // Set texture parameters
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
